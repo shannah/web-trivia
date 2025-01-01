@@ -1,0 +1,7 @@
+= Simple Web Trivia Game
+
+Questions and answers provided by csv files. Separated by Category and Difficulty.
+
+Generate new questions easily using Chat GPT as CSV, and paste into csv file.
+
+Set up simple version for family trivia night at https://weblite.ca/trivia
