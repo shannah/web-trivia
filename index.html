@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .screen {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .screen.active {
+            display: block;
+        }
+        .button {
+            display: inline-block;
+            width: 80%;
+            max-width: 300px;
+            margin: 10px auto;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .home-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #FF5733;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .home-button:hover {
+            background-color: #C70039;
+        }
+        .reset-button {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            background-color: #808080;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .reset-button:hover {
+            background-color: #666666;
+        }
+        h1, h2, p {
+            margin: 20px 0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <button class="home-button hidden" id="home-button">Home</button>
+    <button class="reset-button hidden" id="reset-button">Reset</button>
+
+    <div id="difficulty-screen" class="screen active">
+        <h1>Select Difficulty</h1>
+        <button class="button" data-difficulty="easy">Easy</button>
+        <button class="button" data-difficulty="medium">Medium</button>
+        <button class="button" data-difficulty="hard">Hard</button>
+    </div>
+
+    <div id="category-screen" class="screen">
+        <h1>Select Category</h1>
+        <div id="category-buttons">
+            <!-- Categories will be populated dynamically -->
+        </div>
+    </div>
+
+    <div id="question-screen" class="screen">
+        <h1>Question</h1>
+        <p><strong>Question:</strong> <span id="question-text"></span></p>
+        <button class="button" id="show-answer-button">Show Answer</button>
+        <p class="hidden" id="answer-container"><strong>Answer:</strong> <span id="answer-text"></span></p>
+        <button class="button hidden" id="next-question-button">Next Question</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        const csvFile = "trivia2.csv";
+
+        let triviaData = [];
+        let filteredQuestions = [];
+        let selectedDifficulty = "";
+
+        const difficultyScreen = document.getElementById("difficulty-screen");
+        const categoryScreen = document.getElementById("category-screen");
+        const questionScreen = document.getElementById("question-screen");
+        const homeButton = document.getElementById("home-button");
+        const resetButton = document.getElementById("reset-button");
+        const categoryButtons = document.getElementById("category-buttons");
+        const questionText = document.getElementById("question-text");
+        const answerContainer = document.getElementById("answer-container");
+        const answerText = document.getElementById("answer-text");
+        const showAnswerButton = document.getElementById("show-answer-button");
+        const nextQuestionButton = document.getElementById("next-question-button");
+
+        const LOCAL_STORAGE_KEY = "trivia_questions";
+
+        // Fetch and parse the CSV file
+        Papa.parse(csvFile, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                triviaData = results.data;
+                initializeQuestions();
+                populateCategories();
+            }
+        });
+
+        // Initialize questions from local storage or reset
+        function initializeQuestions() {
+            const storedQuestions = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+            if (storedQuestions) {
+                triviaData = storedQuestions;
+            } else {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(triviaData));
+            }
+        }
+
+        // Populate category buttons dynamically
+        function populateCategories() {
+            const categories = [...new Set(triviaData.map(item => item.Category))];
+            categoryButtons.innerHTML = ""; // Clear previous buttons
+            categories.forEach(category => {
+                const button = document.createElement("button");
+                button.classList.add("button");
+                button.textContent = category;
+                button.dataset.category = category;
+                categoryButtons.appendChild(button);
+
+                // Add event listener for category buttons
+                button.addEventListener("click", () => {
+                    showQuestionScreen(category);
+                });
+            });
+        }
+
+        // Show question screen with a random question
+        function showQuestionScreen(category) {
+            filteredQuestions = triviaData.filter(item => 
+                item.Difficulty &&
+                item.Category &&
+                item.Difficulty.toLowerCase() === selectedDifficulty &&
+                item.Category === category &&
+                !item.shown
+            );
+
+            if (filteredQuestions.length > 0) {
+                const randomQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+                questionText.textContent = randomQuestion.Question;
+
+                // Store the answer but don't display it yet
+                answerText.textContent = randomQuestion.Answer;
+                answerContainer.classList.add("hidden");
+                nextQuestionButton.classList.add("hidden");
+
+                // Mark the question as shown
+                triviaData = triviaData.map(item => 
+                    item.Question === randomQuestion.Question ? { ...item, shown: true } : item
+                );
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(triviaData));
+
+                showScreen(questionScreen);
+            } else {
+                alert("No questions left in this category and difficulty. Please reset.");
+            }
+        }
+
+        // Event listener for difficulty buttons
+        document.querySelectorAll("#difficulty-screen .button").forEach(button => {
+            button.addEventListener("click", () => {
+                selectedDifficulty = button.dataset.difficulty;
+                showScreen(categoryScreen);
+            });
+        });
+
+        // Show answer when the button is clicked
+        showAnswerButton.addEventListener("click", () => {
+            answerContainer.classList.remove("hidden");
+            nextQuestionButton.classList.remove("hidden");
+        });
+
+        // Event listener for "Next Question" button
+        nextQuestionButton.addEventListener("click", () => {
+            showScreen(categoryScreen);
+        });
+
+        // Show a specific screen
+        function showScreen(screen) {
+            document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+            screen.classList.add("active");
+            homeButton.classList.remove("hidden");
+            resetButton.classList.remove("hidden");
+        }
+
+        // Event listener for home button
+        homeButton.addEventListener("click", () => {
+            showScreen(difficultyScreen);
+            homeButton.classList.add("hidden");
+            resetButton.classList.add("hidden");
+        });
+
+        // Event listener for reset button
+        resetButton.addEventListener("click", () => {
+            Papa.parse(csvFile, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    triviaData = results.data.map(item => ({ ...item, shown: false }));
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(triviaData));
+                    alert("Game has been reset!");
+                    populateCategories();
+                    showScreen(difficultyScreen);
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

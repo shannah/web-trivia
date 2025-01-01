@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .screen {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .screen.active {
+            display: block;
+        }
+        .button {
+            display: inline-block;
+            width: 80%;
+            max-width: 300px;
+            margin: 10px auto;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .home-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #FF5733;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .home-button:hover {
+            background-color: #C70039;
+        }
+        h1, h2, p {
+            margin: 20px 0;
+        }
+	.hidden {
+	    display:none;
+	}
+
+    </style>
+</head>
+<body>
+    <button class="home-button hidden" id="home-button">Home</button>
+
+    <div id="difficulty-screen" class="screen active">
+        <h1>Select Difficulty</h1>
+        <button class="button" data-difficulty="easy">Easy</button>
+        <button class="button" data-difficulty="medium">Medium</button>
+        <button class="button" data-difficulty="hard">Hard</button>
+    </div>
+
+    <div id="category-screen" class="screen">
+        <h1>Select Category</h1>
+        <div id="category-buttons">
+            <!-- Categories will be populated dynamically -->
+        </div>
+    </div>
+
+    <div id="question-screen" class="screen">
+        <h1>Question</h1>
+        <p><strong>Question:</strong> <span id="question-text"></span></p>
+        <button class="button" id="show-answer-button">Show Answer</button>
+        <p class="hidden" id="answer-container"><strong>Answer:</strong> <span id="answer-text"></span></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        const csvFile = "trivia.csv";
+
+        let triviaData = [];
+        let filteredQuestions = [];
+        let selectedDifficulty = "";
+
+        const difficultyScreen = document.getElementById("difficulty-screen");
+        const categoryScreen = document.getElementById("category-screen");
+        const questionScreen = document.getElementById("question-screen");
+        const homeButton = document.getElementById("home-button");
+        const categoryButtons = document.getElementById("category-buttons");
+        const questionText = document.getElementById("question-text");
+        const answerContainer = document.getElementById("answer-container");
+        const answerText = document.getElementById("answer-text");
+        const showAnswerButton = document.getElementById("show-answer-button");
+
+        // Fetch and parse the CSV file
+        Papa.parse(csvFile, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                triviaData = results.data;
+                populateCategories();
+            }
+        });
+
+        // Populate category buttons dynamically
+        function populateCategories() {
+            const categories = [...new Set(triviaData.map(item => item.Category))];
+            categories.forEach(category => {
+                const button = document.createElement("button");
+                button.classList.add("button");
+                button.textContent = category;
+                button.dataset.category = category;
+                categoryButtons.appendChild(button);
+
+                // Add event listener for category buttons
+                button.addEventListener("click", () => {
+                    showQuestionScreen(category);
+                });
+            });
+        }
+
+        // Show question screen with a random question
+
+	function showQuestionScreen(category) {
+    filteredQuestions = triviaData.filter(item => {
+        // Ensure both fields are defined and match criteria
+        return item.Difficulty &&
+               item.Category &&
+               item.Difficulty.toLowerCase() === selectedDifficulty &&
+               item.Category === category;
+    });
+
+    if (filteredQuestions.length > 0) {
+        const randomQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+        questionText.textContent = randomQuestion.Question;
+
+        // Store the answer but don't display it yet
+        answerText.textContent = randomQuestion.Answer;
+        answerContainer.classList.add("hidden");
+        showScreen(questionScreen);
+    } else {
+        alert("No questions found for this selection.");
+    }
+}
+
+	// Event listener for difficulty buttons
+        document.querySelectorAll("#difficulty-screen .button").forEach(button => {
+            button.addEventListener("click", () => {
+                selectedDifficulty = button.dataset.difficulty;
+                showScreen(categoryScreen);
+            });
+        });
+
+        // Show answer when the button is clicked
+        showAnswerButton.addEventListener("click", () => {
+            answerContainer.classList.remove("hidden");
+        });
+
+        // Show a specific screen
+        function showScreen(screen) {
+            document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+            screen.classList.add("active");
+            homeButton.classList.remove("hidden");
+        }
+
+        // Event listener for home button
+        homeButton.addEventListener("click", () => {
+            showScreen(difficultyScreen);
+            homeButton.classList.add("hidden");
+        });
+    </script>
+</body>
+</html>
+
