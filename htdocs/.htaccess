@@ -1,0 +1,15 @@
+# Enable Rewrite Engine
+RewriteEngine On
+
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule ^(.*) - [E=HTTP_AUTHORIZATION:%1]
+
+# Ensure the base directory is correct
+RewriteBase /
+
+# If the requested file or directory exists, serve it directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirect all other requests to index.php and preserve PATH_INFO
+RewriteRule ^(.*)$ index.php [L,QSA,PT]
